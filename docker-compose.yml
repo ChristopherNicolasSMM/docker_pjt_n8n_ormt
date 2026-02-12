@@ -1,0 +1,119 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: srv-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - TZ=${TZ}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - srv-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: srv-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - TZ=${TZ}
+      - GENERIC_TIMEZONE=${TZ}
+
+      # URL/host (ajuda links e webhooks)
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=${N8N_PORT}
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+
+      # Segurança
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+
+      # Banco (Postgres)
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+
+      # Recomendado (evita problemas de permissão em alguns cenários)
+      - N8N_DIAGNOSTICS_ENABLED=false
+    volumes:
+      - ./data/n8n:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - srv-net
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: srv-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./data/ollama:/root/.ollama
+    networks:
+      - srv-net
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: srv-openwebui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    environment:
+      - TZ=${TZ}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+    volumes:
+      - ./data/open-webui:/app/backend/data
+    depends_on:
+      - ollama
+    networks:
+      - srv-net
+
+  flask:
+    build:
+      context: ./apps/flask
+    container_name: srv-flask
+    restart: unless-stopped
+    ports:
+      - "8000:8080"
+    environment:
+      - TZ=${TZ}
+      - OLLAMA_URL=http://ollama:11434
+    depends_on:
+      - ollama
+    networks:
+      - srv-net
+
+cloudflared:
+  image: cloudflare/cloudflared:latest
+  container_name: srv-cloudflared
+  restart: unless-stopped
+  command: tunnel run
+  volumes:
+    - ./data/cloudflared:/etc/cloudflared
+  networks:
+    - srv-net
+
+networks:
+  srv-net:
+    driver: bridge

@@ -1,0 +1,20 @@
+# Variáveis sensíveis
+.env
+
+# Dados persistentes
+data/
+
+# Backups
+backups/
+
+# Arquivos temporários
+*.log
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
