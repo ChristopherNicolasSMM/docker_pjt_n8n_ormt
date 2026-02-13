@@ -13,8 +13,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
+COPY templates/ ./templates/
+COPY static/ ./static/
 
 EXPOSE 8080
 
-# Produção leve e estável
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "src.app:app", "--workers", "2", "--threads", "4", "--timeout", "120"]
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "src.app:app", "--workers", "2", "--threads", "4", "--timeout", "600"]

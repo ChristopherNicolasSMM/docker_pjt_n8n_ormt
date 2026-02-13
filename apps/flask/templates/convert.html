@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h5 class="card-title">Converter + Chunk (DOCX/PDF/TXT/MD)</h5>
+    <p class="text-muted mb-3">
+      Converte um arquivo (DOCX/PDF) para Markdown e gera estrutura padrão:
+      <span class="mono">knowledge/&lt;book_id&gt;/full.md</span> + <span class="mono">chunks/*.md</span> + <span class="mono">INDEX.md</span>.
+    </p>
+
+    <form method="post" action="{{ url_for('convert_run') }}" class="row g-3">
+      <div class="col-12">
+        <label class="form-label">Arquivo de origem (relativo ao knowledge/)</label>
+        <input class="form-control mono" name="src" value="{{ src or '' }}" placeholder="ex: uploads/livro.docx" required>
+        <div class="form-text">Dica: faça upload pelo Gerenciador de Arquivos e cole o caminho aqui.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">book_id (nome da pasta)</label>
+        <input class="form-control mono" name="book_id" placeholder="ex: compendio_futhark_antigo" required>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">max_words</label>
+        <input class="form-control" name="max_words" type="number" value="900" min="200" max="3000">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">overlap_words</label>
+        <input class="form-control" name="overlap_words" type="number" value="120" min="0" max="800">
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary" type="submit">Gerar Markdown + Chunks</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

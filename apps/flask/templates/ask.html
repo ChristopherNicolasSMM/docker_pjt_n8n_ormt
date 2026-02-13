@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h5 class="card-title">Teste RAG</h5>
+    <p class="text-muted">
+      Busca contexto no Qdrant e responde com o Ollama.
+    </p>
+
+    <form method="post" action="{{ url_for('ask_run') }}" class="row g-3">
+      <div class="col-12">
+        <label class="form-label">Pergunta</label>
+        <textarea class="form-control" name="question" rows="3" required>{{ form.question or "" }}</textarea>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">doc_id (opcional)</label>
+        <input class="form-control mono" name="doc_id" value="{{ form.doc_id or '' }}" placeholder="ex: compendio_futhark_antigo">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">top_k</label>
+        <input class="form-control" name="top_k" type="number" value="{{ form.top_k or 6 }}" min="1" max="20">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">modelo chat</label>
+        <input class="form-control mono" name="chat_model" value="{{ form.chat_model or default_chat_model }}">
+      </div>
+      <div class="col-12">
+        <button class="btn btn-primary" type="submit">Perguntar</button>
+      </div>
+    </form>
+
+    {% if answer %}
+      <hr>
+      <h6>Resposta</h6>
+      <div class="p-3 border rounded">{{ answer }}</div>
+
+      <hr>
+      <h6>Contextos recuperados</h6>
+      {% for c in contexts %}
+        <div class="mb-3">
+          <div class="small text-muted mono">
+            score={{ "%.4f"|format(c.score) }} · doc_id={{ c.doc_id }} · {{ c.source_path }}
+          </div>
+          <pre class="mono border rounded p-2">{{ c.text }}</pre>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

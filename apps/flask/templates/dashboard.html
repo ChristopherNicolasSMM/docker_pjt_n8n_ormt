@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Status</h5>
+        <ul class="list-unstyled mb-0">
+          <li>🧠 Ollama: <span class="badge text-bg-{{ 'success' if status.ollama_ok else 'danger' }}">{{ 'OK' if status.ollama_ok else 'OFF' }}</span></li>
+          <li>🧱 Qdrant: <span class="badge text-bg-{{ 'success' if status.qdrant_ok else 'danger' }}">{{ 'OK' if status.qdrant_ok else 'OFF' }}</span></li>
+          <li>📦 Coleção: <span class="mono">{{ status.collection }}</span></li>
+          <li>📐 Dim (detectada): <span class="mono">{{ status.embed_dim if status.embed_dim else '-' }}</span></li>
+          <li>🧩 Modelo Embedding: <span class="mono">{{ status.embed_model }}</span></li>
+          <li>💬 Modelo Chat: <span class="mono">{{ status.chat_model }}</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Atalhos</h5>
+        <div class="d-grid gap-2">
+          <a class="btn btn-outline-secondary" href="{{ url_for('browse') }}">📁 Gerenciar arquivos em knowledge/</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('convert_page') }}">🧾 Converter DOCX/PDF → Markdown + Chunks</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('ingest_page') }}">🚀 Indexar chunks no Qdrant</a>
+          <a class="btn btn-primary" href="{{ url_for('ask_page') }}">🔎 Perguntar (RAG)</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">Coleções (Qdrant)</h5>
+      {% if collections %}
+        <ul class="mb-0">
+          {% for c in collections %}
+            <li><span class="mono">{{ c }}</span></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-muted">Sem dados (ou Qdrant offline).</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

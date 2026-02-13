@@ -32,7 +32,7 @@ Cloudflare Tunnel (cloudflared container)
    ↓
 Docker Network (srv-net)
    ├── N8N (5678)
-   ├── Flask API (8080)
+   ├── Flask API (8000)
    ├── Open WebUI (3000 → 8080 interno)
    ├── Ollama (11434)
    └── Postgres (5432)

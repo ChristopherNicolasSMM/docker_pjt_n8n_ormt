@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center">
+      <div>
+        <div class="small text-muted">Arquivo</div>
+        <div class="mono">{{ rel_path }}</div>
+      </div>
+      <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{{ url_for('browse', path=parent_path) }}">⬅ Voltar</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('download_file', path=rel_path) }}">Download</a>
+      </div>
+    </div>
+    <hr>
+    <pre class="mono">{{ content }}</pre>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{
+  "title": "Compêndio do Futhark Antigo",
+  "source_docx": "Compendio_Futhark_Imagem_Esquerda_Capitulo_Direita_v5.4.docx",
+  "generated_at": "2026-02-13T12:39:45",
+  "max_words": 900,
+  "overlap_words": 120,
+  "chunks_total": 124,
+  "paths": {
+    "full_md": "knowledge/compendio_futhark_antigo/full.md",
+    "index_md": "knowledge/compendio_futhark_antigo/INDEX.md",
+    "chunks_dir": "knowledge/compendio_futhark_antigo/chunks/"
+  }
+}

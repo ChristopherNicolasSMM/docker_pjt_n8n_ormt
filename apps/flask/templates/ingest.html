@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h5 class="card-title">Indexar (Ingest) no Qdrant</h5>
+    <p class="text-muted">
+      Envia <span class="mono">knowledge/&lt;book_id&gt;/chunks/*.md</span> para o Qdrant usando embeddings do Ollama.
+    </p>
+
+    <form method="post" action="{{ url_for('ingest_run') }}" class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">book_id</label>
+        <input class="form-control mono" name="book_id" placeholder="ex: compendio_futhark_antigo" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">batch_size</label>
+        <input class="form-control" name="batch_size" type="number" value="200" min="10" max="1000">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">workers</label>
+        <input class="form-control" name="workers" type="number" value="2" min="1" max="8">
+      </div>
+      <div class="col-12">
+        <button class="btn btn-primary" type="submit">Indexar agora</button>
+      </div>
+    </form>
+
+    {% if result %}
+      <hr>
+      <h6>Resultado</h6>
+      <pre class="mono">{{ result }}</pre>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
