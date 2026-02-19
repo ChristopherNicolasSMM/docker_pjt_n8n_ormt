@@ -1,4 +1,4 @@
-
+\
 import os
 import re
 import json
@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file, abort, Response
 import threading
-from uuid import uuid4, UUID, uuid5, NAMESPACE_URL
+from uuid import uuid4
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import PointStruct, VectorParams, Distance, Filter, FieldCondition, MatchValue
@@ -94,26 +94,6 @@ def sizeof_fmt(num: int) -> str:
 
 def sha1_12(s: str) -> str:
     return hashlib.sha1(s.encode("utf-8")).hexdigest()[:12]
-
-
-def normalize_point_id(value, namespace: str):
-    """Qdrant point IDs must be unsigned integers or UUIDs."""
-    if value is None:
-        return None
-    if isinstance(value, int):
-        return value
-    s = str(value).strip()
-    if not s:
-        return None
-    try:
-        return str(UUID(s))
-    except Exception:
-        pass
-    # short hex digest -> int (fits into uint64 easily)
-    if re.fullmatch(r"[0-9a-fA-F]{1,16}", s):
-        return int(s, 16)
-    return str(uuid5(NAMESPACE_URL, f"{namespace}:{s}"))
-
 
 def words_count(text: str) -> int:
     return len(re.findall(r"\S+", text or ""))
@@ -728,7 +708,7 @@ def ingest_status():
 #        text = body.strip()
 #        if not text:
 #            return None
-#        pid = normalize_point_id(meta.get("id"), book_id) or normalize_point_id(sha1_12(str(path) + text[:300]), book_id)
+#        pid = meta.get("id") or sha1_12(str(path) + text[:300])
 #        payload = {
 #            "text": text,
 #            "doc_id": book_id,
@@ -865,7 +845,7 @@ def ingest_worker(job_id: str, book_id: str, batch_size: int, workers: int, rein
         text = body.strip()
         if not text:
             return None
-        pid = normalize_point_id(meta.get("id"), book_id) or normalize_point_id(sha1_12(str(path) + text[:300]), book_id)
+        pid = meta.get("id") or sha1_12(str(path) + text[:300])
         payload = {
             "text": text,
             "doc_id": book_id,

@@ -7,29 +7,176 @@
       Envia <span class="mono">knowledge/&lt;book_id&gt;/chunks/*.md</span> para o Qdrant usando embeddings do Ollama.
     </p>
 
-    <form method="post" action="{{ url_for('ingest_run') }}" class="row g-3">
+    <form method="post" action="{{ url_for('ingest_run') }}" class="row g-3" id="ingestForm">
       <div class="col-md-6">
-        <label class="form-label">book_id</label>
-        <input class="form-control mono" name="book_id" placeholder="ex: compendio_futhark_antigo" required>
+        <label class="form-label">Livro (book_id)</label>
+
+        {% if books and books|length > 0 %}
+          <select class="form-select mono" name="book_id" id="bookIdSelect" required>
+            <option value="" selected disabled>Selecione um livro…</option>
+            {% for b in books %}
+              <option value="{{ b.id }}">{{ b.id }} ({{ b.chunks }} chunks)</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">
+            Pastas detectadas em <span class="mono">knowledge/</span> com <span class="mono">chunks/*.md</span>.
+          </div>
+        {% else %}
+          <input class="form-control mono" name="book_id" id="bookIdInput"
+                 placeholder="ex: compendio_futhark_antigo" required>
+          <div class="form-text text-warning">
+            Nenhuma pasta com <span class="mono">chunks/*.md</span> foi detectada.
+          </div>
+        {% endif %}
+
+        <div class="invalid-feedback">
+          Informe apenas o nome da pasta (ex.: <span class="mono">compendio_futhark_antigo</span>).
+          Não use <span class="mono">/chunks</span>, <span class="mono">*.md</span> ou caminhos.
+        </div>
       </div>
+
       <div class="col-md-3">
         <label class="form-label">batch_size</label>
-        <input class="form-control" name="batch_size" type="number" value="200" min="10" max="1000">
+        <input class="form-control" name="batch_size" type="number" value="100" min="10" max="1000">
+        <div class="form-text">8GB: 50–200 é seguro.</div>
       </div>
+
       <div class="col-md-3">
         <label class="form-label">workers</label>
         <input class="form-control" name="workers" type="number" value="2" min="1" max="8">
+        <div class="form-text">8GB: 1–2 recomendado.</div>
       </div>
-      <div class="col-12">
+
+      <div class="col-12 d-flex gap-2 flex-wrap align-items-center">
         <button class="btn btn-primary" type="submit">Indexar agora</button>
+
+        <!-- Reindex -->
+        <button class="btn btn-outline-danger" type="button" id="reindexBtn">
+          Reindexar (apagar e inserir novamente)
+        </button>
+
+        <input type="hidden" name="reindex" id="reindexField" value="0">
+
+        <a class="btn btn-outline-secondary" href="{{ url_for('browse') }}">Abrir arquivos</a>
       </div>
     </form>
 
-    {% if result %}
-      <hr>
-      <h6>Resultado</h6>
-      <pre class="mono">{{ result }}</pre>
-    {% endif %}
+    <hr>
+
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <div class="text-muted">Status do job:</div>
+      <div class="mono" id="jobId">{{ request.args.get('job','') }}</div>
+      <span class="badge text-bg-secondary" id="jobStatus">idle</span>
+    </div>
+
+    <div class="mt-2">
+      <div class="progress" role="progressbar" aria-label="Progresso">
+        <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+      </div>
+      <div class="small text-muted mt-1" id="jobMsg">—</div>
+      <pre class="mono mt-2" id="jobJson" style="display:none;"></pre>
+    </div>
+
   </div>
 </div>
+
+<script>
+(function () {
+  const form = document.getElementById('ingestForm');
+  const el = document.getElementById('bookIdSelect') || document.getElementById('bookIdInput');
+  const reindexBtn = document.getElementById('reindexBtn');
+  const reindexField = document.getElementById('reindexField');
+
+  function isValidBookId(v) {
+    if (!v) return false;
+    const s = String(v).trim().toLowerCase();
+    const bad = ['/', '\\\\', '*', '.md', 'chunks', '..'];
+    for (const b of bad) if (s.includes(b)) return false;
+    return /^[a-z0-9_-]+$/i.test(v.trim());
+  }
+
+  if (form && el) {
+    form.addEventListener('submit', function (e) {
+      const v = (el.value || '').trim();
+      if (!isValidBookId(v)) {
+        el.classList.add('is-invalid');
+        e.preventDefault(); e.stopPropagation();
+        return false;
+      }
+      el.classList.remove('is-invalid');
+      return true;
+    });
+    el.addEventListener('input', () => el.classList.remove('is-invalid'));
+    el.addEventListener('change', () => el.classList.remove('is-invalid'));
+  }
+
+  // Reindex confirm
+  reindexBtn?.addEventListener('click', () => {
+    const v = (el?.value || '').trim();
+    if (!isValidBookId(v)) {
+      el?.classList.add('is-invalid');
+      return;
+    }
+    const ok = confirm(
+      `REINDEXAR: isso vai APAGAR todos os vetores do doc_id "${v}" no Qdrant e inserir novamente.\n\nDeseja continuar?`
+    );
+    if (!ok) return;
+    reindexField.value = "1";
+    form.submit();
+  });
+
+  // Job polling
+  const jobIdEl = document.getElementById('jobId');
+  const jobStatusEl = document.getElementById('jobStatus');
+  const progressBar = document.getElementById('progressBar');
+  const jobMsg = document.getElementById('jobMsg');
+  const jobJson = document.getElementById('jobJson');
+
+  function setBadge(status) {
+    jobStatusEl.textContent = status || 'idle';
+    jobStatusEl.className = 'badge ' + (
+      status === 'done' ? 'text-bg-success' :
+      status === 'error' ? 'text-bg-danger' :
+      status === 'running' ? 'text-bg-primary' :
+      status === 'queued' ? 'text-bg-warning' :
+      'text-bg-secondary'
+    );
+  }
+
+  function setProgress(processed, total) {
+    const p = total > 0 ? Math.floor((processed / total) * 100) : 0;
+    progressBar.style.width = p + '%';
+    progressBar.textContent = p + '%';
+  }
+
+  async function poll() {
+    const jobId = (jobIdEl.textContent || '').trim();
+    if (!jobId) return;
+
+    try {
+      const r = await fetch(`/ingest/status?job=${encodeURIComponent(jobId)}`);
+      const data = await r.json();
+      if (!data.ok) return;
+
+      const j = data.job || {};
+      setBadge(j.status);
+      setProgress(j.processed || 0, j.total || 0);
+      jobMsg.textContent = j.message || '—';
+
+      jobJson.style.display = 'block';
+      jobJson.textContent = JSON.stringify(j, null, 2);
+
+      if (j.status === 'done' || j.status === 'error') {
+        return; // para de poll
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    setTimeout(poll, 1500);
+  }
+
+  poll();
+})();
+</script>
 {% endblock %}
